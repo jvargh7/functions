@@ -1,4 +1,5 @@
-contrasts_geeglm <- function(fit,model_matrix,vcov_type = "robust"){
+contrasts_geeglm <- function(fit,model_matrix,vcov_type = "robust",
+                             row_names = NULL){
   
   vcov_gee = if(vcov_type =="robust"){
     fit$geese$vbeta}else{fit$geese$vbeta.naiv}
@@ -12,7 +13,13 @@ contrasts_geeglm <- function(fit,model_matrix,vcov_type = "robust"){
     mutate(LCI = Estimate - 1.96*SE,
            UCI = Estimate + 1.96*SE)
   
-  output$term = paste0("Contrast ",c(1:nrow(output)))
+  
+  if(is.null(row_names)|length(row_names)!=nrow(output)){
+    output$term = paste0("Contrast ",c(1:nrow(output)))
+  }
+  if(length(row_names)==nrow(output)){
+    output$term = row_names
+  }
   
   return(output)
   
