@@ -2,6 +2,7 @@ censoring_weights = function(c_formula,df,standardized=TRUE,type = "glmm",cluste
                              n_formula = NULL){
   
   # a_formula : CENSORING (YES = 1) ~ TREATMENT + COVARIATES
+  # A --> C <-- L --> Y; A to be measured before C
   censoring_var = str_split(c_formula," ~ ")[[1]][1]
   
   if(is.null(n_formula)){
