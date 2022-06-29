@@ -1,9 +1,9 @@
-source("nhst/p_val_format.R")
-
+source("C:/code/external/functions/nhst/p_val_format.R")
+require(tidyverse)
 z_test <- function(mean1,mean2,se1,se2,output = "z_p"){
   
   z = (mean1 - mean2)/sqrt(sum(se1^2 + se2^2))
-  p = pnorm(z,lower.tail = TRUE)
+  p = pnorm(abs(z),lower.tail = FALSE)
   
   if(output == "z"){
     return(round(z,digits=2))
