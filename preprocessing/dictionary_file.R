@@ -98,7 +98,9 @@ value_labels <- function(df, type ="dta"){
 
 
 
-dictionary_file <- function(df,type = "dta"){
+dictionary_file <- function(df,type = "dta",name = NULL){
+  
+  name = ifelse(is.null(name),deparse(substitute(df)),name)
   
   print(str_replace_all(tempdir() ,"\\\\","/"))
   dictionary_df <- tryCatch({left_join(variable_labels(df,type=type),
@@ -111,6 +113,6 @@ dictionary_file <- function(df,type = "dta"){
     mutate(class = sapply(.[,"class"],function(x) paste0(x,collapse=";")))
   
   write.csv(dictionary_df, file = paste0(tempdir(), "/dictionary_",
-                                         deparse(substitute(df)),".csv"))
+                                         name,".csv"))
   
 }
