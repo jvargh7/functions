@@ -22,7 +22,7 @@ adjusted_ci = function(model_list,link="lmer identity"){
              std.error = Std..Error)
   }
   
-  if(link %in% c("lm","lmer identity","glmer logit","glmer log","geeglm identity")){
+  if(link %in% c("lm","lmer identity","glmer logit","glmer log","geeglm identity","svyglm quasipoisson")){
     df = purrr::imap_dfr(model_list ,
                          function(x,name) {
                            dfcom = x$df.residual[[1]];
