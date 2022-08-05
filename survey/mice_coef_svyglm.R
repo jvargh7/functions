@@ -1,7 +1,7 @@
 
-# adjusted_ci: 
+# adjusted_ci:  Used for pooling 
 source("C:/code/external/functions/imputation/adjusted_ci.R")
-# round_d
+# round_d: Rounds values to n decimals as a sprintf() wrapper around round()
 source("C:/code/external/functions/preprocessing/round_d.R")
 
 mice_coef_svyglm <- function(model_list,link="svyglm quasipoisson"){
