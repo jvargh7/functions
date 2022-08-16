@@ -1,8 +1,8 @@
 require(srvyr)
 
-svysummary <- function(svy_des, c_vars = character(),p_vars = character(),g_vars = character(),id_vars = ""){
+svysummary <- function(svy_des, c_vars = character(),p_vars = character(),g_vars = character(),id_vars = character()){
   
-  if(id_vars != ""){
+  if(!identical(id_vars,character(0))){
     svy_des <- svy_des %>% 
       group_by_at(vars(one_of(id_vars))) 
     
@@ -41,10 +41,11 @@ svysummary <- function(svy_des, c_vars = character(),p_vars = character(),g_vars
                                    function(g){
                                      
                                      svy_des %>% 
-                                       group_by_at(vars(g)) %>% 
+                                       group_by_at(vars(id_vars,g)) %>% 
                                        summarize(proportion = survey_mean(na.rm = TRUE,vartype="ci")) %>% 
                                        rename(group = g) %>% 
-                                       mutate(variable = g)
+                                       mutate(variable = g,
+                                              group = as.character(group))
                                      
                                    }) %>% 
     dplyr::filter(!is.na(proportion)) %>% 
