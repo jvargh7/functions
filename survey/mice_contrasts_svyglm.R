@@ -3,6 +3,10 @@
 source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
 source("C:/code/external/functions/survey/contrasts_svyglm.R")
 source("C:/code/external/functions/preprocessing/round_d.R")
+# https://github.com/jvargh7/functions/blob/main/preprocessing/prepare_contrasts.R
+# https://github.com/jvargh7/functions/blob/main/survey/contrasts_svyglm.R
+# https://github.com/jvargh7/functions/blob/main/preprocessing/round_d.R
+
 
 # estimand: RR, OR, Beta
 mice_contrasts_svyglm <- function(svymodel_list,modifier,exposure,estimand="RR"){
