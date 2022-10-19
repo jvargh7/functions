@@ -1,6 +1,5 @@
 
-file_path <- "C:/Cloud/OneDrive - Emory University/Proposals/Trajectories of Phenotypes/working/jhs/Data/Analysis_Data"
-file_name <- "analysis1.sas7bdat"
+
 require(tidyverse)
 
 
