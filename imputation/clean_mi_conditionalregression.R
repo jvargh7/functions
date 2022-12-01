@@ -2,8 +2,9 @@ source("C:/code/external/functions/preprocessing/round_d.R")
 
 clean_mi_conditionalregression <- function(model_list,link = "lmer identity"){
   
-  
-  if(link %in% c("lm","lmer identity","geeglm identity")){
+  # lmer robust works for 2 level models: 
+  # https://stackoverflow.com/questions/26412581/robust-standard-errors-for-mixed-effects-models-in-lme4-package-of-r
+  if(link %in% c("lm","lmer identity","geeglm identity","lm_robust","lmer robust")){
     res_out <- adjusted_ci(model_list,link) %>%
       mutate(Coefficient = paste0(round_d(theta_D,2)," \t(",
                                   round_d(L,2),", ",
@@ -15,24 +16,13 @@ clean_mi_conditionalregression <- function(model_list,link = "lmer identity"){
       rename(iv = term) 
   }
   
-  if(link %in% c("lm_robust")){
-    res_out <- adjusted_ci(model_list,link) %>%
-      mutate(Coefficient = paste0(round_d(theta_D,2)," \t(",
-                                  round_d(L,2),", ",
-                                  round_d(U,2),")"),
-             lci = L,
-             uci = U
-             
-      ) %>% 
-      rename(iv = term) 
-  }
   
   if(link %in% c("lm_robust sss")){
     res_out <- adjusted_ci(model_list,link)
   }
   
   
-  if(link == "glmer logit"){
+  if(link %in% c("glmer logit","glmer log","geeglm log")){
     res_out <- adjusted_ci(model_list,link) %>%
       mutate(OR = paste0(round_d(exp(theta_D),2)," \t (",
                          round_d(exp(L),2),", ",

@@ -22,7 +22,8 @@ adjusted_ci = function(model_list,link="lmer identity"){
              std.error = Std..Error)
   }
   
-  if(link %in% c("lm","lmer identity","glmer logit","glmer log","geeglm identity","svyglm quasipoisson")){
+  if(link %in% c("lm","lmer identity","glmer logit","glmer log",
+                 "geeglm identity","svyglm quasipoisson","geeglm log")){
     df = purrr::imap_dfr(model_list ,
                          function(x,name) {
                            dfcom = x$df.residual[[1]];
@@ -88,6 +89,42 @@ adjusted_ci = function(model_list,link="lmer identity"){
       mutate(type = "Conditional")
     
   }
+  
+  if(link %in% c("lmer robust")){
+    require(lme4)
+    require(merDeriv)
+    require(clubSandwich)
+    # https://stackoverflow.com/questions/26412581/robust-standard-errors-for-mixed-effects-models-in-lme4-package-of-r
+    df = purrr::imap_dfr(model_list ,
+                         function(x,name) {
+                           print(name);
+                           dfcom = x@Gp[2];
+                           merDeriv_SE <- sandwich(x, bread = bread(x, full = TRUE),
+                                            mean = meat(x, level = 2)) %>% 
+                             sqrt(diag(.));
+                           
+                           clubSandwich_SE <- vcovCR(x,cluster = x@frame$psu, type = "CR0") %>% 
+                             sqrt(diag());
+                           
+                           wald_SE = sqrt(diag(vcov(x)));
+                           est = fixef(x);
+                           data.frame(
+                                      term = names(est),
+                                      estimate = est,
+                                      std.error = merDeriv_SE,
+                                      wald_std.error = wald_SE,
+                                       
+                                      ) %>%
+                             mutate(index = name,
+                                    dfcom = dfcom)
+                         })  %>%
+      mutate(type = "Fixed Effects")
+    
+    
+    
+    
+  }
+  
   
   
   df = df %>% 
