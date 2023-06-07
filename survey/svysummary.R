@@ -1,6 +1,10 @@
 require(srvyr)
 
-svysummary <- function(svy_des, c_vars = character(),p_vars = character(),g_vars = character(),id_vars = character()){
+svysummary <- function(svy_des, c_vars = character(),
+                       p_vars = character(),
+                       g_vars = character(),
+                       id_vars = character(),
+                       remove_missing_levels = TRUE){
   
   if(!identical(id_vars,character(0))){
     svy_des <- svy_des %>% 
@@ -72,6 +76,7 @@ svysummary <- function(svy_des, c_vars = character(),p_vars = character(),g_vars
                                    function(g){
                                      
                                      svy_des %>% 
+                                       filter_at(vars(g), all_vars(!is.na(.))) %>% 
                                        group_by_at(vars(id_vars,g)) %>% 
                                        srvyr::summarize(proportion = survey_mean(na.rm = TRUE,vartype="ci")) %>% 
                                        rename(group = g) %>% 

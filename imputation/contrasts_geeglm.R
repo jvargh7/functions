@@ -1,5 +1,21 @@
-contrasts_geeglm <- function(fit,model_matrix,vcov_type = "robust",
-                             row_names = NULL){
+source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
+
+contrasts_geeglm <- function(model_matrix = NULL,
+                             fit = NULL,
+                             row_names = NULL,
+                             modifier = NULL,
+                             exposure = NULL,
+                             vcov_type = "robust",
+                             exposure_value = 1,
+                             modifier_value = 1,
+                             e_m_term = TRUE){
+  
+  if(is.null(model_matrix)){
+    model_matrix = prepare_contrasts(glm_het = fit,modifier = modifier,exposure=exposure,exposure_value = exposure_value, modifier_value = modifier_value,e_m_term = e_m_term) %>% 
+      .[[2]]
+  }
+  
+  
   
   vcov_gee = if(vcov_type =="robust"){
     fit$geese$vbeta}else{fit$geese$vbeta.naiv}

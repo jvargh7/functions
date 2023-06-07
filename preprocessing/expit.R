@@ -5,3 +5,10 @@ expit = function(mu,se){
                   TRUE ~ "Ref (1.00)")
   return(out)
 }
+
+inv_logit = function(log_odds){
+  
+  (exp(log_odds)/(1+exp(log_odds))) %>% 
+    return(.)
+  
+}

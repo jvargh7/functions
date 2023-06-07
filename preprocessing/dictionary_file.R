@@ -98,7 +98,7 @@ value_labels <- function(df, type ="dta"){
 
 
 
-dictionary_file <- function(df,type = "dta",name = NULL){
+dictionary_file <- function(df,type = "dta",name = NULL,return_dictionary=FALSE){
   
   name = ifelse(is.null(name),deparse(substitute(df)),name)
   
@@ -114,5 +114,10 @@ dictionary_file <- function(df,type = "dta",name = NULL){
   
   write.csv(dictionary_df, file = paste0(tempdir(), "/dictionary_",
                                          name,".csv"))
+  
+  if(return_dictionary){
+    return(dictionary_df)
+  }
+  
   
 }
