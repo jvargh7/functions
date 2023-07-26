@@ -1,9 +1,8 @@
 source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
 
-
-contrasts_lm <- function(fit,model_matrix,row_names = NULL,
+contrasts_glmer <- function(fit,model_matrix = NULL,row_names = NULL,
                          modifier = NULL,
-                         exposure = NULL,vcov_type = "robust",
+                         exposure = NULL,vcov_type = "naive",
                          exposure_value = 1,
                          modifier_value = 1){
   
@@ -15,18 +14,13 @@ contrasts_lm <- function(fit,model_matrix,row_names = NULL,
       .[[2]]
   }
   
-  if(vcov_type == "robust"){
-    vcov_lm = sandwich::vcovHC(fit, "HC3")
-  } else{vcov_lm = vcov(fit)}
+  vcov_lmer = vcov(fit)
   
-  
-  
-  contrast_est = coef(fit)%*%t(model_matrix)
-  contrast_se = sqrt(model_matrix%*%vcov_lm%*% t(model_matrix))
+  contrast_est = fixef(fit)%*%t(model_matrix)
+  contrast_se = sqrt(model_matrix%*%vcov_lmer%*% t(model_matrix))
   
   output = data.frame(Estimate = contrast_est[1,],
-                      SE = diag(contrast_se),
-                      dfcom = fit$df.residual[[1]]
+                      SE = diag(contrast_se)
   ) %>% 
     mutate(LCI = Estimate - 1.96*SE,
            UCI = Estimate + 1.96*SE)
