@@ -90,6 +90,23 @@ adjusted_ci = function(model_list,link="lmer identity"){
     
   }
   
+  if(link %in% c("coxph")){
+    df = purrr::imap_dfr(model_list ,
+                         function(x,name) {
+                           
+                           ntotal = x$n[[1]];
+                           nevent = x$nevent[[1]]
+                           x %>% 
+                             broom::tidy(exponentiate=FALSE) %>%  
+                             mutate(index = name,
+                                    dfcom = ntotal,
+                                    nevent = nevent)
+                         })  %>% 
+      mutate(type = "Conditional")
+    
+  }
+  
+  
   if(link %in% c("lmer robust")){
     require(lme4)
     require(merDeriv)

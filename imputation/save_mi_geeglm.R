@@ -9,6 +9,7 @@ save_geeglm <- function(model_fit){
        weights = model_fit$weights,
        df.residual = model_fit$df.residual,
        rank = model_fit$rank,
+       xnames = model_fit$geese$xnames,
        naive.cov = model_fit$geese$vbeta.naiv,
        robust.cov = model_fit$geese$vbeta) %>% 
     return(.)

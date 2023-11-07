@@ -2,7 +2,11 @@ prepare_contrasts <- function(glm_nohet = NULL,glm_het = NULL,
                               modifier = character(),exposure = character(),
                               exposure_value = 1,
                               modifier_value = 1,
-                              e_m_term = TRUE){
+                              e_m_term = TRUE,
+                              nterms_het = NULL,
+                              names_het = NULL,
+                              cov_het = NULL,
+                              names_cov_het = NULL){
   
   contrast_matrix_nohet <- NA
   contrast_matrix_het <- NA
@@ -39,24 +43,38 @@ prepare_contrasts <- function(glm_nohet = NULL,glm_het = NULL,
   
   
   
-  if(!is.null(glm_het)){
-    if(class(glm_het)[1] == "geeglm"){
-      nterms_het <- length(coef(glm_het))
-      names_het <- attr(coef(glm_het),"names")
-      cov_het =  glm_het$geese$vbeta
-      names_cov_het = glm_het$geese$xnames
-      
-    } else if(class(glm_het)[1] %in% c("glmerMod","lmerMod")){
-      nterms_het <- length(fixef(glm_het))
-      names_het <- attr(fixef(glm_het),"names")
-      cov_het =  vcov.merMod(glm_het)
-      names_cov_het = rownames(cov_het)
-      
-    } else{
-      nterms_het <- length(glm_het$coefficients)
-      names_het <- attr(glm_het$coefficients,"names")
-      cov_het = glm_het$naive.cov
-      names_cov_het = rownames(cov_het) 
+  if(!is.null(glm_het) | !is.null(nterms_het)){
+    if(!is.null(glm_het)){
+      if(class(glm_het)[1] == "geeglm"){
+        nterms_het = length(coef(glm_het))
+        names_het = attr(coef(glm_het),"names")
+        cov_het =  glm_het$geese$vbeta
+        names_cov_het = glm_het$geese$xnames
+        
+      } else if(class(glm_het)[1] %in% c("glmerMod","lmerMod")){
+        nterms_het = length(fixef(glm_het))
+        names_het = attr(fixef(glm_het),"names")
+        cov_het =  vcov.merMod(glm_het)
+        names_cov_het = rownames(cov_het)
+        
+      } else if(class(glm_het)[1] %in% c("coxph")){
+        nterms_het = length(glm_het$coefficients)
+        names_het = attr(glm_het$coefficients,"names")
+        cov_het = glm_het$var
+        # Only for coxph -------
+        names_cov_het = names_het
+        
+      } else if (class(glm_het)[1] %in% c("glm","lm")){
+        nterms_het = length(glm_het$coefficients)
+        names_het = attr(glm_het$coefficients,"names")
+        cov_het = glm_het$naive.cov
+        names_cov_het = rownames(cov_het) 
+      }
+    } else {
+      nterms_het = nterms_het
+      names_het = names_het
+      cov_het =  cov_het
+      names_cov_het = names_cov_het
     }
     
     
@@ -78,8 +96,8 @@ prepare_contrasts <- function(glm_nohet = NULL,glm_het = NULL,
     contrast_matrix_het[2,which(names_het %in% c(exposure))] <- exposure_value
     contrast_matrix_het[2,which(names_het %in% c(e_m_term_var))] <- exposure_value*modifier_value
     
-    # Interaction effect of Exposure x Modifier
-    contrast_matrix_het[3,which(names_het %in% c(e_m_term_var))] <- exposure_value
+    # Difference between Contrast 1 and Contrast 2
+    contrast_matrix_het[3,which(names_het %in% c(e_m_term_var))] <- exposure_value*modifier_value
     
     # New code ===========
     # Removing unidentified variables --------

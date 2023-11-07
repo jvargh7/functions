@@ -60,6 +60,17 @@ clean_mi_conditionalregression <- function(model_list,link = "lmer identity"){
       rename(iv = term)  
   }
   
+  if(link %in% c("coxph")){
+    res_out <- adjusted_ci(model_list,link) %>%
+      mutate(HR = paste0(round_d(exp(theta_D),2)," \t (",
+                         round_d(exp(L),2),", ",
+                         round_d(exp(U),2),")"),
+             lci = exp(L),
+             uci = exp(U)
+             
+      ) %>% 
+      rename(iv = term) 
+  }
   
   return(res_out)
   

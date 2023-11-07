@@ -1,5 +1,6 @@
 source("C:/code/external/functions/imputation/contrasts_lm.R")
 source("C:/code/external/functions/imputation/contrasts_geeglm.R")
+source("C:/code/external/functions/imputation/contrasts_coxph.R")
 source("C:/code/external/functions/preprocessing/round_d.R")
 
 clean_mi_contrasts <- function(model_list,link = "geeglm identity",model_matrix = NULL,vcov_type="robust",
@@ -7,7 +8,7 @@ clean_mi_contrasts <- function(model_list,link = "geeglm identity",model_matrix 
   
   D = length(model_list)
   
-  if(link %in% c("geeglm identity","lmer identity","lm","geeglm log")){
+  if(link %in% c("geeglm identity","lmer identity","lm","geeglm log","coxph")){
     
     df = purrr::imap_dfr(model_list ,
                          function(x,name) {
@@ -15,11 +16,34 @@ clean_mi_contrasts <- function(model_list,link = "geeglm identity",model_matrix 
                              contrasts_out = contrasts_lm(fit=x,model_matrix=model_matrix,vcov_type = vcov_type,modifier=modifier,exposure=exposure,
                                                           exposure_value = exposure_value, modifier_value = modifier_value,e_m_term = e_m_term) %>% 
                                mutate(index = name)
-                           }
-                           if(class(x)[1] == "geeglm"){
+                           }else if(class(x)[1] == "geeglm"){
                              contrasts_out = contrasts_geeglm(fit=x,model_matrix=model_matrix,vcov_type = vcov_type,modifier=modifier,exposure=exposure,
                                                               exposure_value = exposure_value, modifier_value = modifier_value,e_m_term = e_m_term) %>% 
                                mutate(index = name)
+                           } else if(class(x)[1] == "coxph"){
+                             contrasts_out = contrasts_coxph(fit=x,model_matrix=model_matrix,vcov_type = vcov_type,modifier=modifier,exposure=exposure,
+                                                              exposure_value = exposure_value, modifier_value = modifier_value,e_m_term = e_m_term) %>% 
+                               mutate(index = name)
+                           } else if(class(x)[[1]] == "list"){
+                             # Added when large model objects are saved
+                             # Refer: imputation/save_mi_geeglm.R 
+                              if(link %in% c("geeglm identity")){
+                                contrasts_out = contrasts_geeglm(fit = NULL, 
+                                                                 model_matrix= model_matrix,
+                                                                 vcov_gee = x$robust.cov,
+                                                                 coef_gee = x$coefficients,
+                                                                 dfcom_gee = x$df.residual) %>% 
+                                  mutate(index = name)
+                              }
+                             if(link %in% c("coxph")){
+                               contrasts_out = contrasts_coxph(fit = NULL, 
+                                                                model_matrix= model_matrix,
+                                                                vcov_coxph = x$robust.cov,
+                                                                coef_coxph = x$coefficients,
+                                                                dfcom_coxph = x$ntotal) %>% 
+                                 mutate(index = name)
+                             }
+                             
                            }
                            return(contrasts_out)
                          }) %>% 
@@ -60,6 +84,19 @@ clean_mi_contrasts <- function(model_list,link = "geeglm identity",model_matrix 
     if(link %in% c("glmer logit","glmer log","geeglm log")){
       df <- df %>%
         mutate(RR = paste0(round_d(exp(theta_D),2)," \t (",
+                           round_d(exp(L),2),", ",
+                           round_d(exp(U),2),")"),
+               lci = exp(L),
+               uci = exp(U)
+               
+        ) %>% 
+        rename(iv = term) 
+      
+    }
+    
+    if(link %in% c("coxph")){
+      df <- df %>%
+        mutate(HR = paste0(round_d(exp(theta_D),2)," \t (",
                            round_d(exp(L),2),", ",
                            round_d(exp(U),2),")"),
                lci = exp(L),
