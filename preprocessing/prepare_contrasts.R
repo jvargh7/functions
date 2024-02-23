@@ -64,7 +64,7 @@ prepare_contrasts <- function(glm_nohet = NULL,glm_het = NULL,
         # Only for coxph -------
         names_cov_het = names_het
         
-      } else if (class(glm_het)[1] %in% c("glm","lm")){
+      } else if (class(glm_het)[1] %in% c("svyglm","glm","lm")){
         nterms_het = length(glm_het$coefficients)
         names_het = attr(glm_het$coefficients,"names")
         cov_het = glm_het$naive.cov

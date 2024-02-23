@@ -9,15 +9,26 @@ variable_labels <- function(df,type="dta"){
     vars_display_levels <- c()
     
     # Create single vector of variable type indicator
-    var_types <- tibble(var = names(df), class = sapply(df, class),
-                        type = case_when(class %in% c('character', 'factor') ~ 1,
+    # var_types <- tibble(var = names(df), class = sapply(df, class),
+    #                     type = case_when(class %in% c('character', 'factor') ~ 1,
+    #                                      var %in% vars_display_levels ~ 1,
+    #                                      TRUE ~ 0)) %>%
+    #   pull(type)
+    
+    var_types <- tibble(var = names(df), 
+                        class = map(df, function(x) paste0(class(x),collapse="-")) %>% as.character(),
+                        type = case_when(str_detect(class,"(character|factor)") ~ 1,
                                          var %in% vars_display_levels ~ 1,
                                          TRUE ~ 0)) %>%
       pull(type)
     
+    existing_labels[is.na(existing_labels)] <- ""
+    
+    
+    
     # Create linker dataframe
     link <- dataMeta::build_linker(df, existing_labels, var_types) %>% 
-      mutate(class = sapply(df,class))
+      mutate(class = map(df, function(x) paste0(class(x),collapse="-")) %>% as.character())
   }
   
   if(type %in% c("sas7bdat","RDS","sav","dta2")){
@@ -37,8 +48,8 @@ variable_labels <- function(df,type="dta"){
     # vars_display_levels <- c()
     
     var_types <- tibble(var = names(df), 
-                        class = sapply(df, class),
-                        type = case_when(class %in% c('character', 'factor') ~ 1,
+                        class = map(df, function(x) paste0(class(x),collapse="-")) %>% as.character(),
+                        type = case_when(str_detect(class,"(character|factor)") ~ 1,
                                          # var %in% vars_display_levels ~ 1,
                                          TRUE ~ 0)) %>%
       pull(type)
@@ -79,7 +90,7 @@ variable_labels <- function(df,type="dta"){
 
 value_labels <- function(df, type ="dta"){
   
-  if(type=="dta"){
+  if(type %in% c("dta","dta2")){
     library(labelled) 
     
     value_label_df = imap_dfr(df,function(x,name) {

@@ -45,7 +45,7 @@ svysummary <- function(svy_des, c_vars = character(),
   if(!identical(p_vars,character(0))){
     summary_survey_proportions <- svy_des %>% 
       summarize_at(vars(one_of(p_vars)),
-                   .funs = list(mean = ~survey_mean(.,na.rm=TRUE,vartype="ci"))) 
+                   .funs = list(mean = ~survey_mean(.,proportion = TRUE,na.rm=TRUE,vartype="ci"))) 
     
     if(length(p_vars)>1){
       summary_survey_proportions <- summary_survey_proportions %>% 
@@ -77,7 +77,8 @@ svysummary <- function(svy_des, c_vars = character(),
                                      
                                      svy_des %>% 
                                        filter_at(vars(g), all_vars(!is.na(.))) %>% 
-                                       group_by_at(vars(id_vars,g)) %>% 
+                                       group_by(vars(all_of(id_vars,g))) %>% 
+                                       # srvyr::summarize(proportion = survey_prop(na.rm = TRUE,proportion=TRUE,vartype="ci")) %>% 
                                        srvyr::summarize(proportion = survey_mean(na.rm = TRUE,vartype="ci")) %>% 
                                        rename(group = g) %>% 
                                        mutate(variable = g,
