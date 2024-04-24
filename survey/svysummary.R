@@ -63,6 +63,7 @@ svysummary <- function(svy_des, c_vars = character(),
         mutate(est = case_when(est == "mean_low" ~ "lci",
                                est == "mean_upp" ~ "uci",
                                TRUE ~ "estimate"),
+               value = value*100,
                variable = p_vars) %>% 
         pivot_wider(names_from=est,values_from=value) %>% 
         mutate(type = "Proportion")
