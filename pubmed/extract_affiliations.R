@@ -4,12 +4,22 @@ extract_affiliations <- function(webpage){
       imap_dfr(.,
                function(x,i){
                  
-                 x %>% 
+                 aff_list = x %>% 
                    map_depth(1,"Affiliation") %>% 
                    unlist() %>%
-                   data.frame() %>% 
-                   pivot_longer(cols=everything(),names_to="index",values_to="AffiliationInfo") %>% 
-                   mutate(index = 1:n())
+                   data.frame() 
+                 
+                 if(nrow(aff_list) == 0){
+                   data.frame(index = 1, AffiliationInfo = NA) %>% 
+                     return(.)
+                   
+                 }else{
+                   aff_list %>% 
+                     pivot_longer(cols=everything(),names_to="index",values_to="AffiliationInfo") %>% 
+                     mutate(index = 1:n()) %>% 
+                     return(.)
+                 }
+                 
                  
                })   %>% 
       mutate(author_id = case_when(index == 1 ~ cumsum(index),

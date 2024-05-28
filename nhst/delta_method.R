@@ -15,7 +15,7 @@ delta_method <- function(model,pred_df,weight_var = "combined_sampleweight"){
   m_family = family(model)
   
   
-  if(m_family$family == "binomial" & m_family$link == "log"){
+  if(m_family$family == "binomial" & m_family$link == "logit"){
     pred_e_response = 1 / (1 + exp(-pred_e))
     # mean_pred = Hmisc::wtd.mean(pred_e_response,weights = pred_df$combined_sampleweight,normwt = TRUE)
     mean_pred = Hmisc::wtd.mean(pred_e_response,weights = w,normwt = TRUE)
