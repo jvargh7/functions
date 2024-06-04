@@ -1,6 +1,12 @@
 
-source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
-source("C:/code/external/functions/preprocessing/round_d.R")
+if(Sys.info()["user"] =="JVARGH7"){
+  source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
+  source("C:/code/external/functions/preprocessing/round_d.R")
+} else{
+  print("Please download prepare_contrasts.R and round_d.R from https://github.com/jvargh7/functions/preprocessing")
+  
+}
+
 
 # https://github.com/jvargh7/functions/blob/main/preprocessing/prepare_contrasts.R
 # https://github.com/jvargh7/functions/blob/main/preprocessing/round_d.R
