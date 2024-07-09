@@ -9,6 +9,7 @@ contrasts_lm <- function(fit,model_matrix,row_names = NULL,
   
   # fit = models_list[[1]]
   
+ 
   if(is.null(model_matrix)){
     model_matrix = prepare_contrasts(glm_het = fit,modifier = modifier,exposure=exposure,
                                      exposure_value = exposure_value, modifier_value = modifier_value) %>% 
@@ -43,3 +44,4 @@ contrasts_lm <- function(fit,model_matrix,row_names = NULL,
   
   
 }
+

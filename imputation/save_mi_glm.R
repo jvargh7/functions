@@ -1,27 +1,25 @@
 
-save_geeglm <- function(model_fit){
+save_glm <- function(model_fit){
   list(coefficients = coef(model_fit),
-       corstr = model_fit$modelInfo$corstr,
-       cor_link = model_fit$modelInfo$cor.link,
-       mean_link = model_fit$modelInfo$mean.link,
-       variance_link = model_fit$modelInfo$variance,
+       family = model_fit$family$family,
+       link = model_fit$family$link,
        residuals = model_fit$residuals,
        weights = model_fit$weights,
        df.residual = model_fit$df.residual,
        rank = model_fit$rank,
-       xnames = model_fit$geese$xnames,
-       naive.cov = model_fit$geese$vbeta.naiv,
-       robust.cov = model_fit$geese$vbeta) %>% 
+       xnames = model_fit$xlevels,
+       naive.cov = vcov(model_fit),
+       robust.cov = sandwich::vcovHC(model_fit, "HC3")) %>% 
     return(.)
   
   
 }
 
-save_mi_geeglm <- function(model_list){
+save_mi_glm <- function(model_list){
 
   map(model_list,
       function(fit){
-        save_geeglm(fit) %>% 
+        save_glm(fit) %>% 
           return(.)
         
       }) %>% 
@@ -33,10 +31,10 @@ save_mi_geeglm <- function(model_list){
 
 }
 
-tidy_save_geeglm <- function(geeglm_saved_fit,exponentiate = FALSE){
+tidy_save_glm <- function(glm_saved_fit,exponentiate = FALSE,vcov_type = "robust"){
 
-coefs = geeglm_saved_fit$coefficients
-se = sqrt(diag(geeglm_saved_fit$robust.cov))
+coefs = glm_saved_fit$coefficients
+if(vcov_type == "robust"){se = sqrt(diag(glm_saved_fit$robust.cov))}else{se = sqrt(diag(glm_saved_fit$naive.cov))}
 term = names(coefs)
 
 tidy_df = data.frame(
