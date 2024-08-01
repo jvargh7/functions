@@ -85,10 +85,10 @@ table1_summary <- function(df, c_vars = character(),
                                        
                                        df %>% 
                                          filter_at(vars(g), all_vars(!is.na(.))) %>% 
-                                         group_by(pick(c(id_vars))) %>% 
+                                         # group_by(pick(c(id_vars))) %>% 
                                          mutate(n = n()) %>% 
-                                         ungroup() %>% 
-                                         group_by(pick(one_of(c(id_vars,g)))) %>% 
+                                         # ungroup() %>% 
+                                         group_by(pick(one_of(c(id_vars))),pick(one_of(c(g)))) %>% 
                                          dplyr::summarize(proportion = 100*n()/n,
                                                           freq = n()) %>%
                                          ungroup() %>% 
