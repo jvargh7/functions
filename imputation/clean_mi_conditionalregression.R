@@ -1,5 +1,16 @@
-source("C:/code/external/functions/preprocessing/round_d.R")
-source("C:/code/external/functions/imputation/adjusted_ci.R")
+
+
+tryCatch({
+  source("C:/code/external/functions/preprocessing/round_d.R")
+},error=function(e){
+  source("https://raw.githubusercontent.com/jvargh7/functions/refs/heads/main/preprocessing/round_d.R")})
+
+tryCatch({
+  source("C:/code/external/functions/imputation/adjusted_ci.R")
+},error=function(e){
+  source("https://raw.githubusercontent.com/jvargh7/functions/refs/heads/main/imputation/adjusted_ci.R")})
+
+
 
 clean_mi_conditionalregression <- function(model_list,link = "lmer identity"){
   

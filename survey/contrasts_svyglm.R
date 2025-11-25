@@ -12,12 +12,12 @@ if(Sys.info()["user"] =="JVARGH7"){
 # https://github.com/jvargh7/functions/blob/main/preprocessing/round_d.R
 
 contrasts_svyglm <- function(model_matrix = NULL,
-                             fit = NULL,
+                             fit = NULL, # from mice_contrasts_svyglm
                              row_names = NULL,
                              vcov_fit = NULL,
                              coef_fit = NULL,
                              df_fit = NULL,
-                             svymodel = NULL,
+                             svymodel = NULL, # model fit object (svyglm object)
                              modifier = NULL,
                              exposure = NULL){
   
@@ -40,6 +40,8 @@ contrasts_svyglm <- function(model_matrix = NULL,
       
       model_matrix = prepare_contrasts(glm_het = svymodel,modifier = modifier,exposure=exposure) %>% 
         .[[2]]
+      
+      print(model_matrix)
       
     }
     

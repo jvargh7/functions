@@ -89,6 +89,11 @@ prepare_contrasts <- function(glm_nohet = NULL,glm_het = NULL,
     
     e_m_term_var = ifelse(e_m_term,paste0(exposure,":",modifier),paste0(modifier,":",exposure))
     
+    # print(names_het)
+    # print(paste0("Looking for exposure: ",exposure))
+    # print(paste0("Looking for e_m_term_var: ",e_m_term_var))
+    # print(which(names_het %in% c(exposure,e_m_term_var)))
+    
     # Exposure in Modifier = 0
     contrast_matrix_het[1,which(names_het %in% exposure)] <- exposure_value
     
