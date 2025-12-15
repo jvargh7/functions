@@ -51,11 +51,11 @@ table1_summary <- function(df, c_vars = character(),
   if(!identical(p_vars,character(0))){
     table1_summary_proportions <- df %>% 
       summarize(across(one_of(p_vars),
-                   .fns = list(proportion = ~mean(.,na.rm=TRUE),
-								freq = sum(.,na.rm=TRUE),
-                                n = ~sum(!is.na(.)),
-                               missing = ~sum(is.na(.))),
-                   .names = "{col}__{fn}")) 
+                       .fns = list(proportion = ~mean(.,na.rm=TRUE),
+                                   freq = ~sum(.,na.rm=TRUE),
+                                   n = ~sum(!is.na(.)),
+                                   missing = ~sum(is.na(.))),
+                       .names = "{col}__{fn}")) 
     
     if(length(p_vars)>=1){
       table1_summary_proportions <- table1_summary_proportions %>% 
