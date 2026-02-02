@@ -1,4 +1,4 @@
-source("C:/code/external/functions/preprocessing/prepare_contrasts.R")
+source("https://raw.githubusercontent.com/jvargh7/functions/refs/heads/main/preprocessing/prepare_contrasts.R")
 
 contrasts_coxph <- function(model_matrix = NULL,
                              # Used to create the model_matrix
