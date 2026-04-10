@@ -20,10 +20,10 @@
 
 
 # source("functions/preventr.R")
-source("functions/preventr_vectorized.R")
-source("functions/nephro.R")
-source("functions/kdigo.R")
-source("functions/RECODe.R")
+source("scores/preventr_vectorized.R")
+source("scores/nephro.R")
+source("scores/kdigo.R")
+source("scores/RECODe.R")
 
 clip_lo_hi <- function(x, lo, hi) pmin(pmax(x, lo), hi)
 

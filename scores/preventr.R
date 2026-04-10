@@ -1,15 +1,28 @@
 # ============================================================================
 # STANDALONE PREVENTR PACKAGE FUNCTIONS
 # ============================================================================
-# This file contains a standalone implementation of the preventr package
-# functions to avoid dependency on external package installation.
+# Row-by-row standalone implementation of the AHA PREVENT cardiovascular
+# disease risk calculator, mirroring the preventr package API.
+#
+# Supports all PREVENT model types:
+#   - base:  standard 23-predictor model (24 with age_squared for 30yr)
+#   - hba1c: base + HbA1c (dm / no dm / missing)
+#   - uacr:  base + ln(UACR) + missing UACR indicator
+#   - sdi:   base + SDI decile categories + missing SDI indicator
+#   - full:  base + HbA1c + UACR + SDI (all enhanced predictors)
+#
+# Each model × sex × time horizon estimates 5 outcomes:
+#   total_cvd, ascvd, heart_failure, chd, stroke
+#
+# Coefficients are loaded from prevent_coefficients.csv (long format).
+# SDI decile lookup is loaded from sdi_decile_dat.rds.
 # 
 # MAIN DEPENDENCIES:
 # - dplyr (for data manipulation)
 # - stats (base R - no installation needed)
 #
 # USAGE:
-# source("functions/preventr.R")
+# source("functions/scores/preventr.R")
 # result <- estimate_risk(age = 55, sex = "male", sbp = 120, ...)
 #
 # ============================================================================
@@ -152,8 +165,8 @@ is_valid_bmi <- function(bmi, quiet = TRUE) {
 }
 
 is_valid_model <- function(model, quiet = TRUE) {
-  if (is_na_or_empty(model)) return(TRUE)  # NULL is valid
-  valid_models <- c("base", "enhanced", "full")
+  if (is_na_or_empty(model)) return(TRUE)  # NULL is valid (auto-select)
+  valid_models <- c("base", "hba1c", "uacr", "sdi", "full")
   if (!model %in% valid_models) return(paste("model must be one of:", paste(valid_models, collapse = ", ")))
   return(TRUE)
 }
@@ -229,16 +242,24 @@ standardize_chol_unit <- function(chol_unit) {
 # --- MODEL SELECTION AND SUPPORT FUNCTIONS ---
 
 select_model <- function(hba1c = NULL, uacr = NULL, zip = NULL) {
-  if (!is_na_or_empty(hba1c) && !is_na_or_empty(uacr)) return("full")
-  if (!is_na_or_empty(hba1c) || !is_na_or_empty(uacr) || !is_na_or_empty(zip)) return("enhanced")
-  return("base")
+  has_hba1c <- !is_na_or_empty(hba1c) && is.numeric(hba1c) && !is.na(hba1c)
+  has_uacr  <- !is_na_or_empty(uacr)  && is.numeric(uacr)  && !is.na(uacr)
+  has_zip   <- !is_na_or_empty(zip)
+
+  if (!has_hba1c && !has_uacr && !has_zip) return("base")
+  if (!has_hba1c &&  has_uacr && !has_zip) return("uacr")
+  if ( has_hba1c && !has_uacr && !has_zip) return("hba1c")
+  if (!has_hba1c && !has_uacr &&  has_zip) return("sdi")
+  "full"
 }
 
 stylize_model_to_run <- function(model) {
   switch(model,
-    "base" = "PREVENT Base Model",
-    "enhanced" = "PREVENT Enhanced Model", 
-    "full" = "PREVENT Full Model",
+    "base"  = "Base model",
+    "hba1c" = "Base model adding HbA1c",
+    "uacr"  = "Base model adding UACR",
+    "sdi"   = "Base model adding SDI",
+    "full"  = "Base model adding HbA1c, SDI, and UACR (also referred to as the full model)",
     "PREVENT Base Model"
   )
 }
@@ -260,146 +281,66 @@ is_supported_bmi_call <- function(call) {
 
 # --- COEFFICIENTS AND MODEL PARAMETERS ---
 
-# Create coefficient vectors matching the real preventr package structure
-get_prevent_coefficients <- function(model, sex, time) {
-  # Coefficient vectors for base model (10-year)
-  # These match the order of variables created in prep_terms
-  
-  if (time == "10yr") {
-    if (sex == "female") {
-      if (model == "base") {
-        # Female 10-year total CVD
-        coef_vec <- c(
-          age = 0.794,
-          age_squared = 0,  # Not used for 10yr
-          non_hdl_c = 0.0305,
-          hdl_c = -0.161,
-          sbp_lt_110 = -0.239,
-          sbp_gte_110 = 0.360,
-          dm = 0.867,
-          smoking = 0.536,
-          bmi_lt_30 = 0,
-          bmi_gte_30 = 0,
-          egfr_lt_60 = 0.605,
-          egfr_gte_60 = 0.0434,
-          bp_tx = 0.315,
-          statin = -0.148,
-          bp_tx_sbp_gte_110 = -0.0664,
-          statin_non_hdl_c = 0.120,
-          age_non_hdl_c = -0.0820,
-          age_hdl_c = 0.0307,
-          age_sbp_gte_110 = -0.0946,
-          age_dm = -0.271,
-          age_smoking = -0.0787,
-          age_bmi_gte_30 = 0,
-          age_egfr_lt_60 = -0.164,
-          constant = -3.31
-        )
-      } else {
-        coef_vec <- NULL  # Other models not implemented yet
-      }
-    } else {  # male
-      if (model == "base") {
-        # Male 10-year total CVD
-        coef_vec <- c(
-          age = 0.769,
-          age_squared = 0,  # Not used for 10yr
-          non_hdl_c = 0.0736,
-          hdl_c = -0.0954,
-          sbp_lt_110 = -0.435,
-          sbp_gte_110 = 0.336,
-          dm = 0.769,
-          smoking = 0.439,
-          bmi_lt_30 = 0,
-          bmi_gte_30 = 0,
-          egfr_lt_60 = 0.538,
-          egfr_gte_60 = 0.0165,
-          bp_tx = 0.289,
-          statin = -0.134,
-          bp_tx_sbp_gte_110 = -0.0476,
-          statin_non_hdl_c = 0.150,
-          age_non_hdl_c = -0.0518,
-          age_hdl_c = 0.0191,
-          age_sbp_gte_110 = -0.105,
-          age_dm = -0.225,
-          age_smoking = -0.0895,
-          age_bmi_gte_30 = 0,
-          age_egfr_lt_60 = -0.154,
-          constant = -3.03
-        )
-      } else {
-        coef_vec <- NULL
+# Cache environment for coefficient CSV
+.preventr_coef_env <- new.env(parent = emptyenv())
+
+#' Load the long-format coefficient CSV (cached)
+.load_prevent_coefs <- function() {
+  if (is.null(.preventr_coef_env$coefs)) {
+    candidates <- c(
+      "prevent_coefficients.csv",
+      "scores/prevent_coefficients.csv",
+      file.path("functions", "scores", "prevent_coefficients.csv")
+    )
+    for (p in candidates) {
+      if (file.exists(p)) {
+        .preventr_coef_env$coefs <- read.csv(p, stringsAsFactors = FALSE)
+        return(.preventr_coef_env$coefs)
       }
     }
-  } else {  # 30yr
-    if (sex == "female") {
-      if (model == "base") {
-        # Female 30-year total CVD
-        coef_vec <- c(
-          age = 0.550,
-          age_squared = -0.0928,
-          non_hdl_c = 0.0410,
-          hdl_c = -0.166,
-          sbp_lt_110 = -0.163,
-          sbp_gte_110 = 0.330,
-          dm = 0.679,
-          smoking = 0.320,
-          bmi_lt_30 = 0,
-          bmi_gte_30 = 0,
-          egfr_lt_60 = 0.186,
-          egfr_gte_60 = 0.0554,
-          bp_tx = 0.289,
-          statin = -0.0757,
-          bp_tx_sbp_gte_110 = -0.0564,
-          statin_non_hdl_c = 0.107,
-          age_non_hdl_c = -0.0751,
-          age_hdl_c = 0.0302,
-          age_sbp_gte_110 = -0.0999,
-          age_dm = -0.321,
-          age_smoking = -0.161,
-          age_bmi_gte_30 = 0,
-          age_egfr_lt_60 = -0.145,
-          constant = -1.32
-        )
-      } else {
-        coef_vec <- NULL
-      }
-    } else {  # male
-      if (model == "base") {
-        # Male 30-year total CVD
-        coef_vec <- c(
-          age = 0.463,
-          age_squared = -0.0984,
-          non_hdl_c = 0.0836,
-          hdl_c = -0.103,
-          sbp_lt_110 = -0.214,
-          sbp_gte_110 = 0.290,
-          dm = 0.533,
-          smoking = 0.214,
-          bmi_lt_30 = 0,
-          bmi_gte_30 = 0,
-          egfr_lt_60 = 0.116,
-          egfr_gte_60 = 0.0604,
-          bp_tx = 0.233,
-          statin = -0.0272,
-          bp_tx_sbp_gte_110 = -0.0384,
-          statin_non_hdl_c = 0.134,
-          age_non_hdl_c = -0.0512,
-          age_hdl_c = 0.0166,
-          age_sbp_gte_110 = -0.110,
-          age_dm = -0.259,
-          age_smoking = -0.157,
-          age_bmi_gte_30 = 0,
-          age_egfr_lt_60 = -0.117,
-          constant = -1.15
-        )
-      } else {
-        coef_vec <- NULL
-      }
-    }
+    stop("prevent_coefficients.csv not found. Place it beside this script.")
   }
-  
-  return(coef_vec)
+  .preventr_coef_env$coefs
+}
+
+#' Get coefficient vector for a specific model / sex / time / outcome
+#' @return Named numeric vector (term -> coefficient)
+get_prevent_coefficients <- function(model, sex, time, outcome = "total_cvd") {
+  all_coefs <- .load_prevent_coefs()
+
+  subset <- all_coefs[all_coefs$model == model &
+                      all_coefs$sex == sex &
+                      all_coefs$time == time &
+                      all_coefs$outcome == outcome, ]
+
+  if (nrow(subset) == 0) return(NULL)
+
+  coef_vec <- subset$coefficient
+  names(coef_vec) <- subset$term
+  coef_vec
+}
+
+# --- SDI LOOKUP ---
+
+#' Look up SDI decile from ZIP code (scalar)
+get_sdi_scalar <- function(zip) {
+  if (is_na_or_empty(zip)) return(NA_real_)
+  # Try loading sdi_decile_dat.rds
+  sdi_dat <- NULL
+  candidates <- c(
+    "sdi_decile_dat.rds",
+    "scores/sdi_decile_dat.rds",
+    file.path("functions", "scores", "sdi_decile_dat.rds")
+  )
+  for (p in candidates) {
+    if (file.exists(p)) { sdi_dat <- readRDS(p); break }
+  }
+  if (is.null(sdi_dat) && requireNamespace("preventr", quietly = TRUE)) {
+    sdi_dat <- preventr:::sdi_decile_dat
+  }
+  if (is.null(sdi_dat)) return(NA_real_)
+  res <- sdi_dat$sdi_decile[sdi_dat$zip == as.character(zip)]
+  if (length(res) == 0) NA_real_ else res
 }
 
 # --- DATA PREPARATION ---
@@ -410,50 +351,71 @@ convert_chol_to_mmol <- function(chol_mg_dl) {
 }
 
 prep_terms <- function(pred_vals, model, chol_unit) {
-  # pred_vals is a tibble with one row
-  # We need to extract values and create centered/scaled predictors
-  
+  # pred_vals is a one-row tibble with columns: age, total_c, hdl_c, statin,
+  # sbp, bp_tx, dm, smoking, egfr, bmi, sex, hba1c, uacr, zip
+
   # Convert cholesterol to mmol/L if needed
   if (chol_unit == "mg/dL") {
     non_hdl_mmol <- convert_chol_to_mmol(pred_vals$total_c - pred_vals$hdl_c)
-    hdl_mmol <- convert_chol_to_mmol(pred_vals$hdl_c)
+    hdl_mmol     <- convert_chol_to_mmol(pred_vals$hdl_c)
   } else {
     non_hdl_mmol <- pred_vals$total_c - pred_vals$hdl_c
-    hdl_mmol <- pred_vals$hdl_c
+    hdl_mmol     <- pred_vals$hdl_c
   }
-  
-  # Center and scale variables according to PREVENT specification
+
+  # Base predictors (centred/scaled per preventr:::prep_terms)
   result <- list(
-    age = (pred_vals$age - 55) / 10,
-    age_squared = ((pred_vals$age - 55) / 10)^2,
-    non_hdl_c = non_hdl_mmol - 3.5,
-    hdl_c = (hdl_mmol - 1.3) / 0.3,
-    sbp_lt_110 = (pmin(pred_vals$sbp, 110) - 110) / 20,
-    sbp_gte_110 = (pmax(pred_vals$sbp, 110) - 130) / 20,
-    dm = as.numeric(pred_vals$dm),
-    smoking = as.numeric(pred_vals$smoking),
-    bmi_lt_30 = (pmin(pred_vals$bmi, 30) - 25) / 5,
-    bmi_gte_30 = (pmax(pred_vals$bmi, 30) - 30) / 5,
-    egfr_lt_60 = (pmin(pred_vals$egfr, 60) - 60) / -15,
-    egfr_gte_60 = (pmax(pred_vals$egfr, 60) - 90) / -15,
-    bp_tx = as.numeric(pred_vals$bp_tx),
-    statin = as.numeric(pred_vals$statin)
+    age           = (pred_vals$age - 55) / 10,
+    age_squared   = ((pred_vals$age - 55) / 10)^2,
+    non_hdl_c     = non_hdl_mmol - 3.5,
+    hdl_c         = (hdl_mmol - 1.3) / 0.3,
+    sbp_lt_110    = (min(pred_vals$sbp, 110) - 110) / 20,
+    sbp_gte_110   = (max(pred_vals$sbp, 110) - 130) / 20,
+    dm            = as.numeric(pred_vals$dm),
+    smoking       = as.numeric(pred_vals$smoking),
+    bmi_lt_30     = (min(pred_vals$bmi, 30) - 25) / 5,
+    bmi_gte_30    = (max(pred_vals$bmi, 30) - 30) / 5,
+    egfr_lt_60    = (min(pred_vals$egfr, 60) - 60) / -15,
+    egfr_gte_60   = (max(pred_vals$egfr, 60) - 90) / -15,
+    bp_tx         = as.numeric(pred_vals$bp_tx),
+    statin        = as.numeric(pred_vals$statin)
   )
-  
-  # Add interaction terms
+
+  # Interaction terms
   result$bp_tx_sbp_gte_110 <- result$bp_tx * result$sbp_gte_110
-  result$statin_non_hdl_c <- result$statin * result$non_hdl_c
-  result$age_non_hdl_c <- result$age * result$non_hdl_c
-  result$age_hdl_c <- result$age * result$hdl_c
-  result$age_sbp_gte_110 <- result$age * result$sbp_gte_110
-  result$age_dm <- result$age * result$dm
-  result$age_smoking <- result$age * result$smoking
-  result$age_bmi_gte_30 <- result$age * result$bmi_gte_30
-  result$age_egfr_lt_60 <- result$age * result$egfr_lt_60
-  
-  # Add constant term
+  result$statin_non_hdl_c  <- result$statin * result$non_hdl_c
+  result$age_non_hdl_c     <- result$age * result$non_hdl_c
+  result$age_hdl_c         <- result$age * result$hdl_c
+  result$age_sbp_gte_110   <- result$age * result$sbp_gte_110
+  result$age_dm            <- result$age * result$dm
+  result$age_smoking       <- result$age * result$smoking
+  result$age_bmi_gte_30    <- result$age * result$bmi_gte_30
+  result$age_egfr_lt_60    <- result$age * result$egfr_lt_60
+
+  # Enhanced predictors (only for non-base models)
+  if (model != "base") {
+    # SDI
+    sdi_decile <- if (!is.na(pred_vals$zip)) get_sdi_scalar(pred_vals$zip) else NA_real_
+    result$sdi_4_to_6   <- as.numeric(!is.na(sdi_decile) && sdi_decile >= 4 && sdi_decile <= 6)
+    result$sdi_7_to_10  <- as.numeric(!is.na(sdi_decile) && sdi_decile >= 7 && sdi_decile <= 10)
+    result$missing_sdi  <- as.numeric(is.na(sdi_decile))
+
+    # UACR
+    uacr_val <- pred_vals$uacr
+    result$ln_uacr      <- if (!is.na(uacr_val)) log(uacr_val) else 0
+    result$missing_uacr <- as.numeric(is.na(uacr_val))
+
+    # HbA1c (centred at 5.3, split by DM status)
+    hba1c_val <- pred_vals$hba1c
+    dm_val    <- result$dm
+    result$hba1c_dm     <- if (!is.na(hba1c_val) && dm_val == 1) hba1c_val - 5.3 else 0
+    result$hba1c_no_dm  <- if (!is.na(hba1c_val) && dm_val == 0) hba1c_val - 5.3 else 0
+    result$missing_hba1c <- as.numeric(is.na(hba1c_val))
+  }
+
+  # Constant
   result$constant <- 1
-  
+
   # Return as named numeric vector
   unlist(result)
 }
@@ -461,50 +423,45 @@ prep_terms <- function(pred_vals, model, chol_unit) {
 # --- CORE MODEL CALCULATION ---
 
 run_models <- function(model, sex, time, pred_vals) {
-  coefs <- get_prevent_coefficients(model, sex, time)
-  
-  if (is.null(coefs)) {
-    return(dplyr::tibble(
-      total_cvd = NA_real_, 
-      ascvd = NA_real_,
-      heart_failure = NA_real_, 
-      chd = NA_real_, 
-      stroke = NA_real_,
-      model = model, 
-      over_years = as.integer(gsub("yr", "", time)),
-      input_problems = NA_character_
-    ))
-  }
-  
-  # Remove age_squared from both pred_vals and coefs for 10-year model
+  # All five PREVENT outcomes
+  outcomes <- c("total_cvd", "ascvd", "heart_failure", "chd", "stroke")
+
+  # Remove age_squared for 10yr
   if (time == "10yr") {
-    if ("age_squared" %in% names(pred_vals)) {
-      pred_vals <- pred_vals[names(pred_vals) != "age_squared"]
+    pred_vals <- pred_vals[names(pred_vals) != "age_squared"]
+  }
+
+  results <- list()
+  for (out in outcomes) {
+    coefs <- get_prevent_coefficients(model, sex, time, outcome = out)
+
+    if (is.null(coefs)) {
+      results[[out]] <- NA_real_
+      next
     }
-    if ("age_squared" %in% names(coefs)) {
+
+    # Remove age_squared from coefs for 10yr (belt-and-suspenders)
+    if (time == "10yr") {
       coefs <- coefs[names(coefs) != "age_squared"]
     }
+
+    # Subset pred_vals to only the terms this model uses
+    shared_terms <- intersect(names(coefs), names(pred_vals))
+    log_odds <- sum(coefs[shared_terms] * pred_vals[shared_terms])
+    risk <- exp(log_odds) / (1 + exp(log_odds))
+    results[[out]] <- round(risk, 3)
   }
-  
-  # Calculate linear predictor as sum of coefficient * predictor value
-  log_odds <- sum(coefs * pred_vals)
-  
-  # Convert to probability using logistic function
-  risk_total_cvd <- exp(log_odds) / (1 + exp(log_odds))
-  
-  # Round to 3 decimal places as per preventr package
-  risk_total_cvd <- round(risk_total_cvd, 3)
-  
-  return(dplyr::tibble(
-    total_cvd = risk_total_cvd,
-    ascvd = NA_real_,
-    heart_failure = NA_real_,
-    chd = NA_real_,
-    stroke = NA_real_,
-    model = model,
-    over_years = as.integer(gsub("yr", "", time)),
+
+  dplyr::tibble(
+    total_cvd     = results$total_cvd,
+    ascvd         = results$ascvd,
+    heart_failure = results$heart_failure,
+    chd           = results$chd,
+    stroke        = results$stroke,
+    model         = model,
+    over_years    = as.integer(gsub("yr", "", time)),
     input_problems = NA_character_
-  ))
+  )
 }
 
 # --- PCE MODELS ---
