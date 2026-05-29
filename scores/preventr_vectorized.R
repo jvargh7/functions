@@ -107,7 +107,8 @@ get_prevent_coef_table <- function() {
     candidates <- c(
       "prevent_coefficients.csv",
       "scores/prevent_coefficients.csv",
-      file.path("functions", "scores", "prevent_coefficients.csv")
+      file.path("functions", "scores", "prevent_coefficients.csv"),
+	  "https://raw.githubusercontent.com/jvargh7/functions/refs/heads/main/scores/prevent_coefficients.csv"
     )
     loaded <- FALSE
     for (p in candidates) {
@@ -248,7 +249,7 @@ estimate_risk_fast <- function(data,
 #' @keywords internal
 .calculate_prevent_risk <- function(data, time, model, quiet = FALSE) {
 
-  all_coefs <- get_prevent_coef_table()
+  all_coefs <- read_csv("https://raw.githubusercontent.com/jvargh7/functions/refs/heads/main/scores/prevent_coefficients.csv")
 
   # Filter coefficients to this model + time
   coefs_long <- all_coefs |>
