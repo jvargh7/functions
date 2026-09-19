@@ -87,12 +87,12 @@ table1_summary <- function(df, c_vars = character(),
                                        df %>% 
                                          filter_at(vars(g), all_vars(!is.na(.))) %>% 
                                          # group_by(pick(c(id_vars))) %>% 
-                                         mutate(n = n()) %>% 
                                          # ungroup() %>% 
                                          group_by(pick(one_of(c(id_vars))),pick(one_of(c(g)))) %>% 
-                                         dplyr::summarize(proportion = 100*n()/n,
-                                                          freq = n()) %>%
-                                         ungroup() %>% 
+                                         dplyr::summarize(freq = n()) %>%
+                                         ungroup() %>%
+										 group_by(pick(one_of(c(id_vars)))) %>%
+										 mutate(proportion = 100*freq/sum(freq),.groups="drop")%>%
                                          distinct(pick(one_of(c(id_vars,g))),.keep_all = TRUE) %>% 
                                          pivot_longer(cols=-one_of(c(id_vars,g)),names_to="est",values_to="value") %>% 
                                          rename(group = g) %>% 
